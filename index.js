@@ -1,177 +1,205 @@
 const { registerUser, verifyUser, loginUser, changePassword, removeUser } = require('./cognito/modules');
 
-exports.handler = async function (event, context, callback) {
+const parametersError = {
+    statusCode: 400,
+    body: JSON.stringify({
+        error: 'Invalid parameters',
+    }),
+}
 
+exports.register = async (event, context, callback) => {
+
+    //to register a new user
+
+    let body = JSON.parse(event.body);
+    let email = body.email;
+    let password = body.password;
     let response;
 
-    if (event.queryStringParameters.action) {
+    if (email && password) {
 
-        let queries = event.queryStringParameters;
-        let body = JSON.parse(event.body);
+        let error;
+        let user = await registerUser(email, password).catch(e => error = e.message);
 
-        //To register a new user
+        if (user.username) {
 
-        if (queries.action === 'register' && body.email && body.password) {
-
-            let error;
-
-            let user = await registerUser(body.email, body.password).catch(e => error = e.message);
-
-            if (user.username) {
-
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        message: 'Verification OTP sent',
-                        email: body.email,
-                    }),
-                }
-
-            } else {
-
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        error: user || error,
-                    }),
-                }
-
+            response = {
+                statusCode: 201,
+                body: JSON.stringify({
+                    message: 'Verification OTP sent',
+                }),
             }
 
-            return callback(null, response);
-        }
+        } else {
 
-        //To verify OTP
-
-        if (queries.action === 'verify' && body.email && body.otp) {
-
-            let error;
-            let user = await verifyUser(body.email, body.otp).catch(e => error = e.message);
-
-            if (user === 'SUCCESS') {
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        message: 'Account verification done',
-                        email: body.email,
-                    }),
-                }
-            } else {
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        error: user || error,
-                    }),
-                }
+            response = {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: user || error,
+                }),
             }
-
-            return callback(null, response);
-        }
-
-        //For login
-
-        if (queries.action === 'login' && body.email && body.password) {
-
-            let error;
-            let user = await loginUser(body.email, body.password).catch(e => error = e.message);
-
-            if (user) {
-
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        message: 'Login success',
-                        user: user,
-                    }),
-                }
-
-            } else {
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        error: error,
-                    }),
-                }
-            }
-
-            return callback(null, response);
-        }
-
-        //To change password
-
-        if (queries.action === 'change-pass' && body.email && body.password && body.newPassword) {
-
-            let error;
-            let user = await changePassword(body.email, body.password, newPassword).catch(e => error = e.message);
-
-            if (user) {
-
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        message: 'Password changed',
-                        user: user,
-                    }),
-                }
-
-            } else {
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        error: error,
-                    }),
-                }
-            }
-
-            return callback(null, response);
-        }
-
-        //To remove account
-
-        if (queries.action === 'remove' && body.email && body.password) {
-
-            let error;
-            let user = await removeUser(body.email, body.password).catch(e => error = e.message);
-
-            if (user) {
-
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        message: 'Account removed',
-                        user: user,
-                    }),
-                }
-
-            } else {
-                response = {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        error: error,
-                    }),
-                }
-            }
-
-            return callback(null, response);
-        }
-
-        response = {
-            statusCode: 200,
-            body: JSON.stringify({
-                queries: queries,
-                body: body,
-            }),
         }
 
         return callback(null, response);
     }
 
-    response = {
-        statusCode: 200,
-        body: JSON.stringify({
-            error: 'Please specify a action',
-        }),
+    return callback(null, parametersError);
+}
+
+exports.verify = async (event, context, callback) => {
+
+    //to verify otp and verify account
+
+    let body = JSON.parse(event.body);
+    let email = body.email;
+    let otp = body.otp;
+    let response;
+
+    if (email && otp) {
+
+        let error;
+        let user = await verifyUser(email, otp).catch(e => error = e.message);
+
+        if (user === 'SUCCESS') {
+
+            response = {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'Account verification done',
+                }),
+            }
+
+        } else {
+
+            response = {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: user || error,
+                }),
+            }
+        }
+
+        return callback(null, response);
     }
 
-    return callback(null, response);
+    return callback(null, parametersError);
+}
+
+exports.login = async (event, context, callback) => {
+
+    //to login
+
+    let body = JSON.parse(event.body);
+    let email = body.email;
+    let password = body.password;
+    let response;
+
+    if (email && password) {
+
+        let error;
+        let user = await loginUser(email, password).catch(e => error = e.message);
+
+        if (user) {
+
+            response = {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'Login success',
+                    user: user,
+                }),
+            }
+
+        } else {
+
+            response = {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: error,
+                }),
+            }
+        }
+
+        return callback(null, response);
+    }
+
+    return callback(null, parametersError);
+}
+
+exports.changePassword = async (event, context, callback) => {
+
+    //to change password
+
+    let body = JSON.parse(event.body);
+    let email = body.email;
+    let password = body.password;
+    let newPassword = body.newPassword;
+    let response;
+
+    if (email && password && newPassword) {
+
+        let error;
+        let user = await changePassword(email, password, newPassword).catch(e => error = e.message);
+
+        if (user) {
+
+            response = {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'Password changed',
+                }),
+            }
+
+        } else {
+
+            response = {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: error,
+                }),
+            }
+        }
+
+        return callback(null, response);
+    }
+
+    return callback(null, parametersError);
+}
+
+exports.remove = async (event, context, callback) => {
+
+    //to remove an account
+
+    let body = JSON.parse(event.body);
+    let email = body.email;
+    let password = body.password;
+    let response;
+
+    if (email && password) {
+
+        let error;
+        let user = await removeUser(email, password).catch(e => error = e.message);
+
+        if (user) {
+
+            response = {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'Account removed',
+                }),
+            }
+
+        } else {
+
+            response = {
+                statusCode: 200,
+                body: JSON.stringify({
+                    error: error,
+                }),
+            }
+        }
+
+        return callback(null, response);
+    }
+
+    return callback(null, parametersError);
 }
