@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "amazon-cognito-identity-js": "^6.1.2",
+    "dotenv": "^16.0.3"
+  }
+}
